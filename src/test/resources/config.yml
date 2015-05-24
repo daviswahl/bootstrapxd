@@ -1,0 +1,6 @@
+- name: farts
+  definition: "kafka | log"
+  deploy: true
+- name: butts
+  definition: "kafka | log"
+  deploy: true
