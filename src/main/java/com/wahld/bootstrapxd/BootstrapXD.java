@@ -1,7 +1,7 @@
 package com.wahld.bootstrapxd;
 
 import org.apache.commons.cli.*;
-
+import org.apache.commons.cli.ParseException;
 /**
  * Created by dwahl on 5/22/15.
  */
@@ -11,21 +11,21 @@ public class BootstrapXD {
         Options options = new Options();
 
         Option configPath =
-                OptionBuilder.withArgName("configFile").hasArg()
-                .withDescription("use given config yaml")
-                .create("configPath");
+                Option.builder("configPath").argName("configFile").hasArg()
+                .desc("use given config yaml")
+                .build();
 
         Option xdHost =
-                OptionBuilder.withArgName("xdHost")
+                Option.builder("xdHost").argName("xdHost")
                 .hasArg()
-                .withDescription("host address host:ip")
-                .create("xdHost");
+                .desc("host address host:ip")
+                .build();
 
         Option help =
-                OptionBuilder.withArgName("help")
+                Option.builder("help").argName("help")
                         .hasArg()
-                        .withDescription("print this help")
-                        .create("help");
+                        .desc("print this help")
+                        .build();
 
         options.addOption(help);
         options.addOption(configPath);
@@ -49,7 +49,7 @@ public class BootstrapXD {
 
             new Runner(line).execute();
         }
-        catch( ParseException exp ) {
+        catch( Exception exp ) {
             // oops, something went wrong
             System.err.println( "Parsing failed.  Reason: " + exp.getMessage() );
         }
@@ -57,12 +57,3 @@ public class BootstrapXD {
 
     }
 }
-/*
-throws URISyntaxException {
-        SpringXDTemplate xdTemplate = new SpringXDTemplate(new URI("http://localhost:9393"));
-        PagedResources<DetailedContainerResource> containers = xdTemplate.runtimeOperations().listContainers();
-        for (DetailedContainerResource container : containers) {
-        System.out.println(container);
-        }
-
-*/

@@ -16,9 +16,5 @@ public class TestBootstrapXD {
 
         Runner runner = new Runner();
         File file = new File(uri);
-        System.out.println(file.getPath());
-        runner.readConfig(file);
-        runner.setUri(new URI("http://10.10.10.21:9393"));
-        runner.execute();
     }
 }

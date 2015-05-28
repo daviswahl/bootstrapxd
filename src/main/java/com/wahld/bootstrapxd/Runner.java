@@ -1,15 +1,11 @@
 package com.wahld.bootstrapxd;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import lombok.Getter;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Setter;
 import org.apache.commons.cli.CommandLine;
 import org.springframework.xd.rest.client.impl.SpringXDTemplate;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.springframework.xd.rest.domain.ModuleDefinitionResource;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,13 +18,14 @@ import java.util.Map;
 /**
  * Created by dwahl on 5/22/15.
  */
-public class Runner {
+public class Runner{
 
     CommandLine line;
 
-    @Setter
-    URI uri;
-    List<Event> events;
+    @Setter public URI uri;
+
+    List<ResourceDefinition> resourceDefinitions = new ArrayList<ResourceDefinition>();
+
 
     public Runner(){}
 
@@ -45,55 +42,57 @@ public class Runner {
     }
 
     public void readConfig(File configFile){
+
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         try {
-            List<Map<String,Object>> eventMap = mapper.readValue(configFile, List.class);
-            //List<Event> events = mapper.readValue(configFile, new TypeReference<List<Event>>(){});
-            this.events = new ArrayList<>();
-
-            eventMap.forEach(k -> {
-                        this.events.add(new Event((String) k.get("name"), (String) k.get("definition"), (Boolean) k.get("deploy")));
+            Map<String,Map<String, Map<String, Object>>> definitions = mapper.readValue(configFile, Map.class);
+            definitions.forEach((k, v) -> {
+                        ResourceFactory factory = new ResourceFactory(k);
+                        v.forEach((g,s) -> resourceDefinitions.add(factory.getDefinition(g, s)) );
                     }
             );
+
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public void execute(){
-        events.forEach((e) ->
-            dispatch(uri, e)
-        );
-    }
-
-    public void dispatch(URI uri, Event event){
         SpringXDTemplate xdTemplate = new SpringXDTemplate(uri);
-        xdTemplate.streamOperations().createStream(event.name, event.definition, event.deploy);
+        xdTemplate.streamOperations().destroyAll();
+        xdTemplate.jobOperations().destroyAll();
+        resourceDefinitions.forEach((k) -> k.dispatch(xdTemplate));
     }
 
 
-    public class Event{
-        @Getter
-        public String name;
-        @Getter
-        public String definition;
-        @Getter
-        public boolean deploy;
+    private class ResourceFactory{
 
-        @JsonCreator
-        private Event(@JsonProperty("name") String name,
-                      @JsonProperty("definition") String definition,
-                      @JsonProperty("deploy") boolean deploy){
-            this.name = name;
-            this.definition = definition;
-            this.deploy =deploy;
+        String type;
+
+        public ResourceFactory(String type) {
+
+            if (type.contentEquals("streams") || type.contentEquals("jobs")) {
+                this.type = type;
+            } else {
+                throw new Error("UnkownType");
+            }
         }
 
+        public ResourceDefinition getDefinition (String name, Map<String,Object>configMap){
 
+            String definition = (String) configMap.get("definition");
+            boolean deploy = (boolean) configMap.get("deploy");
 
-        public void print(){
-            System.out.println(this.definition);
-            System.out.println(this.deploy);
+            if(type.equals("jobs")){
+                return new JobDefinition(name, definition, deploy);
+            }
+            if(type.equals("streams")){
+                return new StreamDefinition(name, definition, deploy);
+            }
+            if(type.equals("modules")){
+                return new ModuleDefinition(name, definition, deploy);
+            }
+            return null;
         }
     }
 }
